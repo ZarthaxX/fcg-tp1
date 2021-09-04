@@ -2,9 +2,6 @@
 // es objeto del tipo ImageData ( más info acá https://mzl.la/3rETTC6  )
 // Factor indica la cantidad de intensidades permitidas (sin contar el 0)
 
-
-
-
 function arrayToPixels(arr, width, height) {
     let res = []
     let index = 0
@@ -25,7 +22,7 @@ function arrayToPixels(arr, width, height) {
 }
 
 function pixelsToArray(pixels, arr) {
-    index = 0;
+    let index = 0;
     for(let i = 0; i < pixels.length; i++){
         for(let j = 0; j < pixels[i].length; j++){
             rgba = pixels[i][j];
@@ -82,24 +79,34 @@ function getPixel(pixels, x, y, width) {
     return pixels[y * width + x];
 }
 
-function floyd(pixels, image, factor) {
+function ditherFunction(pixels, image, factor, matrix, px) {
+
     for(let i = 0; i < image.height; i++) {
         for(let j = 0; j < image.width; j++) {
             oldPixel = pixels[i][j];
             newPixel = findClosestPixel(oldPixel, factor);
             quantError = substractPixels(oldPixel, newPixel);
-            //[- * 7]
-            //[3 5 1]
-            if(0 < j && j < (image.width-1) && i < (image.height-1)) {
-                pixels[i][j+1]   = addPixels(pixels[i][j+1], multiplyPixel(quantError, 7/16));
-                pixels[i+1][j-1] = addPixels(pixels[i+1][j-1], multiplyPixel(quantError, 3/16));
-                pixels[i+1][j]   = addPixels(pixels[i+1][j], multiplyPixel(quantError, 5/16));
-                pixels[i+1][j+1] = addPixels(pixels[i+1][j+1], multiplyPixel(quantError, 1/16));
-            }
             
+            for(let y = 0; y < matrix.length; y++) {
+                for(let x = 0; x < matrix[y].length; x++) {
+                    let offsetY = i+y;
+                    let offsetX = j-px+x;
+                    if(0 <= offsetY && offsetY < pixels.length && 0 <= offsetX && offsetX < pixels[offsetY].length)
+                        pixels[offsetY][offsetX] = addPixels(pixels[offsetY][offsetX], multiplyPixel(quantError, matrix[y][x]));
+                }  
+            }
+         
             pixels[i][j] = newPixel;
         }
     }
+}
+
+function floyd(pixels, image, factor) {
+    ditherFunction(pixels, image, factor, [[0,0,7/16],[3/16,5/16,1/16]], 1);
+}
+
+function jarvis(pixels, image, factor) {
+    ditherFunction(pixels, image, factor, [[0, 0, 0, 7/48, 5/48],[3/48, 5/48, 7/48, 5/48, 3/48],[1/48, 3/48, 5/48, 3/48, 1/48]], 2);
 }
 
 function dither(image, factor)
@@ -108,9 +115,7 @@ function dither(image, factor)
 
     floyd(pixels, image, factor)
 
-    console.log("matrix", pixels);
-
-    console.log(pixelsToArray(pixels, image.data));
+    pixelsToArray(pixels, image.data)
 }
 
 // Imágenes a restar (imageA y imageB) y el retorno en result
